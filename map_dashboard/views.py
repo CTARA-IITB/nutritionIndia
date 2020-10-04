@@ -209,8 +209,8 @@ def create_post_timeperiod(request):
                                 geometry_field = 'wkb_geometry',
                                 fields = ('id','st_name','dt_name'))
 				select_area_data = allData.filter(Q(indicator_id=indicatorSelected) & Q(subgroup_id=subgroupSelected) & Q(timeperiod_id=timeperiodSelected) & Q(area_parent_id=area_parentid)).only('area_name','area_code', 'data_value')
-			print("in time period change")
-			print(datalevel2)
+			# print("in time period change")
+			# print(datalevel2)
 			jsondatalevel3 = serializers.serialize('json',datalevel3)
 			jsondatalevel2 = serializers.serialize('json',datalevel2)
 			jsonSelectAreaData = serializers.serialize('json', select_area_data)
@@ -231,6 +231,7 @@ class DashboardView(TemplateView):
 		areaSelect = request.GET.get('area')
 		indicator_list=Indicator.objects.all().filter(Q(classification=8)).order_by('indicator_order')
 		area_list=AreaEn.objects.values('area_id', 'area_name')
+		# print(area_list)
 		area_geodata =[]
 		select_area_data = []
 		select_area_level = 1
