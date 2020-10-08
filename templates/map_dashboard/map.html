@@ -44,73 +44,19 @@ nav > div a.nav-item.nav-link:focus
 }
 
 
- body {
-  position: fixed;
+/* .maps-group {
+  overflow-y: auto;
+  white-space: nowrap;
+} */
+
+body {
+  position: relative;
   left: 0;
   right: 0;
   top: 0;
   bottom: 0;
   margin: 0;
   height: 100%;
-  overflow: hidden;
-}
-.mapdiv{
-    width: 100%;
-    height: 100%;
-   
-}
-.selection{
-    align-content: center;
-}
-
-.tab{
-    width: 100%;
-
-}
-
-.just-padding {
-    padding: 15px;
-}
-
-.list-group.list-group-root {
-    padding: 0;
-    overflow: hidden;
-}
-
-.list-group.list-group-root .list-group {
-    margin-bottom: 0;
-}
-
-.list-group.list-group-root .list-group-item {
-    border-radius: 2;
-    border-width: 1px 0 0 0;
-    width: auto;  
-    height: 35px; 
-    background-color:#D93545;
-    color:white;
-    margin-top: 20px;
-}
-
-.list-group.list-group-root > .list-group-item:first-child {
-    border-top-width: 0;
-}
-
-.list-group.list-group-root > .list-group > .list-group-item {
-    margin-left:40px;
-}
-
-.list-group.list-group-root > .list-group > .list-group > .list-group-item {
-    margin-left: 40px;
-}
-
-.list-group-item .glyphicon {
-    margin-right: 5px;
-}
-
-
-.dd{
-  margin-left: 10%;
-
 }
 
 div.tooltip { 
@@ -126,8 +72,6 @@ div.tooltip {
   border-radius: 50px;
   pointer-events: none;     
 }
-
-
 </style>
 {% endblock %}
 {% block map_content %}
@@ -150,6 +94,7 @@ div.tooltip {
     </div>
  
        <form method="POST" name="nutriInfo">
+        {% csrf_token %}
         <div class="row mt-2">
             <div class="col-3">
               <select class="custom-select" name ="area_select" id="area-1"> 
@@ -169,42 +114,38 @@ div.tooltip {
       </div>
       <div class="col-3">
         <select class="custom-select" name ="subgroup_select" id="subgroup-1"> 
-          {% for subgroup in subgroupList %} 
-              <option value = "{{ subgroup.subgroup_id }}">{{ subgroup.subgroup_name }}
+          {% for ius in subgroupList %} 
+              <option value = "{{ ius.subgroup__subgroup_id }}">{{ ius.subgroup__subgroup_name }}
               </option>
           {% endfor %}                               
       </select> 
     </div>
     <div class="col-3">
       <select class="custom-select" name ="timeperiod_select" id="timeperiod-1"> 
-        {% for timeperiod in timeperiodList %} 
-            <option value = "{{ timeperiod.timeperiod_id }}">{{ timeperiod.timeperiod }}
+        {% for e in timeperiodList %} 
+            <option value = "{{ e.timeperiod__timeperiod_id }}">{{ e.timeperiod__timeperiod }}
             </option>
         {% endfor %}                              
     </select> 
   </div>
       </div>
        </form>
-      <div class="row mt-5">
-
-        <div class="col-4" id="chart3">
-          <!-- <svg></svg> -->
+       <div class="row mt-5 ">
+        <div class="offset-4" id="chart3">
         </div>
-
-        <div class="col-4" id="chart1">
-          <!-- <svg></svg> -->
+        <div class="col-6" id="chart1">
         </div>
-        <div class="col-4" id="chart2">
-          <!-- <svg></svg> -->
-        </div>
+        <div class="col-6" id="chart2">
+        
       </div>
+    </div>   
        
               
          
   <script>
 
     //Reading data
-   const width = 920;
+  const width = 920;
   const height = 580;
   var areaSelected= $("area-1").val();
   const svg1 = d3
@@ -220,11 +161,12 @@ div.tooltip {
       .attr("width", width)
       .attr("height", height);
 
- var mercator = d3 .geoMercator().scale(1);
+ var mercator = d3.geoMercator().scale(1);
  const pathGenerator = d3.geoPath().projection(mercator);
    
  var districtJson='/static/json/india-district.json';
  var stateJson='/static/json/india-state.json';
+ var center;
  const margin = {left:200,top:100 ,right:40,bottom:20};
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
@@ -232,321 +174,231 @@ div.tooltip {
 
 $('#nav-tab2').click(function() {
   var areaSelected= $('#area-1').val();
-
-var url = "{% url 'tab2' %}?area="+areaSelected;
+  var url = "{% url 'tab2' %}?area="+areaSelected;
       $(location).attr('href', url);
       window.location = url;
 });
 $('#nav-tab3').click(function() {
   var areaSelected= $('#area-1').val();
-
-var url = "{% url 'tab3' %}?area="+areaSelected;
+  var url = "{% url 'tab3' %}?area="+areaSelected;
     $(location).attr('href', url);
     window.location = url;
 });
 $('#nav-tab4').click(function() {
   var areaSelected= $('#area-1').val();
-
   var url = "{% url 'tab4' %}?area="+areaSelected;
       $(location).attr('href', url);
       window.location = url;
 });
 
- $("#area-1").change(function(){
+
+ $("#area-1").change(function(e){
   areaSelected = $('#area-1').val();
+  console.log(areaSelected, "areaSelected");
   svg1.selectAll('*').remove();
   svg2.selectAll('*').remove();
   svg3.selectAll('*').remove();
+  e.preventDefault();
   $.ajax({
         url : "{% url 'ajaxAreaTab1' %}", // the endpoint
-        type : "POST", // http method
+        method : "GET", // http method
         data : { area : $('#area-1').val(),
         indicator : $('#indicator-1').val(),
-        subgroup : $('#subgroup-1').val(),
-        tab:"tab1"
+        subgroup : $('#subgroup-1').val()
          }, 
         
          success : function(response) {
-          $('#timeperiod-1').empty();
-            var  new_options = response.timeresults;
-                $.each(new_options, function(key, value) {   
-                    $('#timeperiod-1')
-                        .append($('<option>', { value:value.timeperiod_id })
-                        .text(value.timeperiod)); 
-                });
-                var data_state = JSON.parse(response.context.data_level2);
-                var data2 = []
-                data_state.forEach(element => {
-                  data2.push(element.fields);
-                  });
-                addProperties(data2, stateJson, svg1);
+              $('#timeperiod-1').empty();
+                var  new_options = response.timeresults;
+                    $.each(new_options, function(key, value) {   
+                        $('#timeperiod-1')
+                            .append($('<option>', { value:value.timeperiod__timeperiod_id })
+                            .text(value.timeperiod__timeperiod)); 
+                    });
+                    var data_state = JSON.parse(response.context.data_level2);
+                    addProperties(data_state, stateJson, svg1);
+                    if(response.area_level > 1)
+                    {
+                    var selectArea_data = JSON.parse(response.context.select_area_data);
+                    var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
+                    addPropertiesSelectedArea(selectArea_data, selectArea_geodata, svg3);
+                    }
+                    else{
+                      addProperties(data_state, stateJson, svg3);
+                    }
+                    var data_district = JSON.parse(response.context.data_level3);
+                    addProperties(data_district, districtJson, svg2);
+            }
+        });
 
-                if(response.area_level > 1)
-                {
-                var selectArea_data = JSON.parse(response.context.select_area_data);
-                var data3 = []
-                selectArea_data.forEach(element => {
-                  data3.push(element.fields);
-                  });
-                var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
-                addPropertiesSelectedArea(data3, selectArea_geodata, svg3);
-                }
-                else{
-                  addProperties(data2, stateJson, svg3);
-                }
+    });
 
-
-                var data_district = JSON.parse(response.context.data_level3);
-                var data1 = []
-                data_district.forEach(element => {
-                  data1.push(element.fields);
-                  });
-                addProperties(data1, districtJson, svg2);
-
-               
-
-         }
-  
-  
-  });
-
- });
-
-      $("#indicator-1").change(function(){
+      $("#indicator-1").change(function(e){
         svg1.selectAll('*').remove();
         svg2.selectAll('*').remove();
         svg3.selectAll('*').remove();
+        e.preventDefault();
         $.ajax({
         url : "{% url 'ajaxIndicatorTab1' %}", // the endpoint
-        type : "POST", // http method
+        method : "GET", // http method
         data : { indicator : $('#indicator-1').val(),
-        area : $('#area-1').val(),
-        tab:"tab1"
-         }, // data sent with the post request
+        area : $('#area-1').val()
+         },
 
         // handle a successful response
         success : function(response) {
+                $('#subgroup-1').empty();
+                var  new_options = response.subresults;
+                    $.each(new_options, function(key, value) {   
+                        $('#subgroup-1')
+                            .append($('<option>', { value:value.subgroup__subgroup_id })
+                            .text(value.subgroup__subgroup_name)); 
+                    });
 
-             // remove the value from the input
-           // console.log(json); // log the returned json to the console
-            $('#subgroup-1').empty();
-            var  new_options = response.subresults;
-                $.each(new_options, function(key, value) {   
-                    $('#subgroup-1')
-                        .append($('<option>', { value:value.subgroup_id })
-                        .text(value.subgroup_name)); 
-                });
+                $('#timeperiod-1').empty();
+                var  new_options = response.timeresults;
+                    $.each(new_options, function(key, value) {   
+                        $('#timeperiod-1')
+                            .append($('<option>', { value:value.timeperiod__timeperiod_id })
+                            .text(value.timeperiod__timeperiod)); 
+                    }); 
+                    var data_state = JSON.parse(response.context.data_level2);
+                    addProperties(data_state, stateJson, svg1);
+                    if(response.area_level > 1)
+                    {
+                    var selectArea_data = JSON.parse(response.context.select_area_data);      
+                    var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
+                    addPropertiesSelectedArea(selectArea_data, selectArea_geodata, svg3);
+                    }
+                    else{
+                      addProperties(data_state, stateJson, svg3);
+                    }
+                    var data_district = JSON.parse(response.context.data_level3);
+                    addProperties(data_district, districtJson, svg2);           
+              }
 
-            $('#timeperiod-1').empty();
-            var  new_options = response.timeresults;
-                $.each(new_options, function(key, value) {   
-                    $('#timeperiod-1')
-                        .append($('<option>', { value:value.timeperiod_id })
-                        .text(value.timeperiod)); 
-                }); 
-                var data_state = JSON.parse(response.context.data_level2);
-                var data2 = []
-                data_state.forEach(element => {
-                  data2.push(element.fields);
-                  });
-                addProperties(data2, stateJson, svg1);
-
-                if(response.area_level > 1)
-                {
-                var selectArea_data = JSON.parse(response.context.select_area_data);
-                var data3 = []
-                selectArea_data.forEach(element => {
-                  data3.push(element.fields);
-                  });
-                
-                var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
-                addPropertiesSelectedArea(data3, selectArea_geodata, svg3);
-                }
-                else{
-                  addProperties(data2, stateJson, svg3);
-                }
-
-                var data_district = JSON.parse(response.context.data_level3);
-                var data1 = []
-                data_district.forEach(element => {
-                  data1.push(element.fields);
-                  });
-                addProperties(data1, districtJson, svg2);
-
-                
-        }
-
-    });
+        });
       });
 
-      $("#subgroup-1").change(function(){
+      $("#subgroup-1").change(function(e){
         svg1.selectAll('*').remove();
         svg2.selectAll('*').remove();
         svg3.selectAll('*').remove();
+        e.preventDefault();
         $.ajax({
         url : "{% url 'ajaxSubgroupTab1' %}", // the endpoint
-        type : "POST", // http method
+        method : "GET", // http method
         data : { indicator : $('#indicator-1').val(),
         subgroup: $('#subgroup-1').val(),
-        area: $('#area-1').val(),
-        tab:"tab1"
-         }, // data sent with the post request
-
+        area: $('#area-1').val()
+         }, 
         // handle a successful response
-        success : function(response) {
+            success : function(response) { 
+              $('#timeperiod-1').empty();
+                var  new_options = response.timeresults;
+                    $.each(new_options, function(key, value) {   
+                        $('#timeperiod-1')
+                            .append($('<option>', { value:value.timeperiod__timeperiod_id })
+                            .text(value.timeperiod__timeperiod)); 
+                    });   
+                    var data_state = JSON.parse(response.context.data_level2);
+                    addProperties(data_state, stateJson, svg1);
+                    if(response.area_level > 1)
+                    {
+                    var selectArea_data = JSON.parse(response.context.select_area_data);
+                    var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
+                    addPropertiesSelectedArea(selectArea_data, selectArea_geodata, svg3);
+                    }
+                    else{
+                      addProperties(data_state, stateJson, svg3);
+                    }
+                    var data_district = JSON.parse(response.context.data_level3); 
+                    addProperties(data_district, districtJson, svg2);
+                  
+            }
 
-             // remove the value from the input
-           // console.log(json); // log the returned json to the console
-  
-          $('#timeperiod-1').empty();
-            var  new_options = response.timeresults;
-                $.each(new_options, function(key, value) {   
-                    $('#timeperiod-1')
-                        .append($('<option>', { value:value.timeperiod_id })
-                        .text(value.timeperiod)); 
-                });   
-
-                var data_state = JSON.parse(response.context.data_level2);
-                var data2 = []
-                data_state.forEach(element => {
-                  data2.push(element.fields);
-                  });
-                addProperties(data2, stateJson, svg1);
-
-                if(response.area_level > 1)
-                {
-                var selectArea_data = JSON.parse(response.context.select_area_data);
-                var data3 = []
-                selectArea_data.forEach(element => {
-                  data3.push(element.fields);
-                  });
-  
-                var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
-                addPropertiesSelectedArea(data3, selectArea_geodata, svg3);
-                }
-                else{
-                  addProperties(data2, stateJson, svg3);
-                }
-
-                var data_district = JSON.parse(response.context.data_level3); 
-                var data1 = []
-                data_district.forEach(element => {
-                  data1.push(element.fields);
-                  });
-                addProperties(data1, districtJson, svg2);
-
-               
-        }
-
-    });
+        });
       });
 
-
-      $("#timeperiod-1").change(function(){
+      $("#timeperiod-1").change(function(e){
         svg1.selectAll('*').remove();
         svg2.selectAll('*').remove();
         svg3.selectAll('*').remove();
+        e.preventDefault();
         $.ajax({
-        url : "{% url 'ajaxTimeperiodTab1' %}", // the endpoint
-        type : "POST", // http method
-        data : { indicator : $('#indicator-1').val(),
-        subgroup: $('#subgroup-1').val(),
-        timeperiod: $('#timeperiod-1').val(),
-        area: $('#area-1').val(),
-        tab:"tab1"
-         }, // data sent with the post request
+            url : "{% url 'ajaxTimeperiodTab1' %}", // the endpoint
+            method : "GET", // http method
+            data : { indicator : $('#indicator-1').val(),
+            subgroup: $('#subgroup-1').val(),
+            timeperiod: $('#timeperiod-1').val(),
+            area: $('#area-1').val()
+            },
 
         // handle a successful response
-        success : function(response) {
+            success : function(response) {
+                    var data_state = JSON.parse(response.context.data_level2);
+                    addProperties(data_state, stateJson, svg1);
+                    var data_district = JSON.parse(response.context.data_level3);
+                    addProperties(data_district, districtJson, svg2);
+                    if(response.context.select_area_geodata.length > 0)
+                    {
+                    var selectArea_data = JSON.parse(response.context.select_area_data);
+                    var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
+                    addPropertiesSelectedArea(selectArea_data, selectArea_geodata, svg3);
+                    }
+                    else
+                    {
+                      addProperties(data_state, stateJson, svg3);
+                    }     
+            }
 
-             // remove the value from the input
-           // console.log(json); // log the returned json to the console
-
-                var data_state = JSON.parse(response.context.data_level2);
-                var data2 = []
-                data_state.forEach(element => {
-                  data2.push(element.fields);
-                  });
-                addProperties(data2, stateJson, svg1);
-
-
-                var data_district = JSON.parse(response.context.data_level3);
-                var data1 = []
-                data_district.forEach(element => {
-                  data1.push(element.fields);
-                  });
-                addProperties(data1, districtJson, svg2);
-               
-
-                if(response.context.select_area_geodata.length > 0)
-                {
-                var selectArea_data = JSON.parse(response.context.select_area_data);
-                var data3 = []
-                selectArea_data.forEach(element => {
-                  data3.push(element.fields);
-                  });
-                var selectArea_geodata = JSON.parse(response.context.select_area_geodata);
-                addPropertiesSelectedArea(data3, selectArea_geodata, svg3);
-                }
-                else
-                {
-                  addProperties(data2, stateJson, svg3);
-                }
-
-
-                
-        }
-
-    });
+        });
       });
-const renderSelectedarea = (data, geojson, svg) => {
+const renderSelectedarea = (data, mercator, svg) => {
     const g = svg.append("g");
-    var scaleCenter = calculateScaleCenter(geojson);
-    mercator.scale(8000)
-        .center(scaleCenter.center)
-        .translate([width/2, height/2]);
+    const pathGenerator = d3.geoPath().projection(mercator);
     var tooltip = d3.select("body").append("div") 
           .attr("class", "tooltip")       
           .style("opacity", 0);
-  let c1Value  = d => d.properties.dataValue;
-  const onMouseOver = d =>{	
-    if(typeof d.properties.dataValue != 'undefined')
-    {
-  tooltip.transition().duration(200).style("opacity", .9);		
-  tooltip.html("<b>"+d.properties.dt_name+"</b><br><b>Value:</b>"+d.properties.dataValue)
-      .style("left", d3.event.pageX + "px")
-      .style("top",  d3.event.pageY - 30 + "px");	
-    }
-  };
-  
-  let myColor = (opt,v) =>{
-    let min,max,comp, low, high;  
-      min = d3.min(data,c1Value);
-      max = d3.max(data,c1Value);
-      comp = (max - min)/3;
-      low = min+comp;
-      high =max -comp;
-    if (typeof v != "undefined") {
-    
-           if (v < low) return "#24562B";
-            //matte green
-            else if (v >= low && v <= high) return "#FFE338";
-            //matte yellow
-            else if (v > high) return "#B2022F"; //matte red
-    }
-    else {
-      return "#A9A9B0";
-    }
-  };  
-  	let paths = g.selectAll('path').data(data);
-    let pathEnter = 
-    paths.enter().append('path').attr('d',pathGenerator).attr('class','my-block')
-    .style("fill", d =>myColor(1,c1Value(d))).on("mouseover", d => onMouseOver(d))          
-    .on("mouseout", function(d) {   
-              tooltip.transition()    
-              .duration(500)    
-              .style("opacity", 0); 
-            });
+        let c1Value  = d => d.dataValue;
+        const onMouseOver = d =>{	
+          if(typeof d.dataValue != 'undefined')
+          {
+        tooltip.transition().duration(200).style("opacity", .9);		
+        tooltip.html("<b>"+d.areaname+"</b><br><b>Value:</b>"+d.dataValue)
+            .style("left", d3.event.pageX + "px")
+            .style("top",  d3.event.pageY - 30 + "px");	
+          }
+        };
+        
+        let myColor = (opt,v) =>{
+          let min,max,comp, low, high;  
+            min = d3.min(data,c1Value);
+            console.log(min, "min");
+            max = d3.max(data,c1Value);
+            console.log(max, "max");
+            comp = (max - min)/3;
+            low = min+comp;
+            high =max -comp;
+          if (typeof v != "undefined") {
+          
+                if (v < low) return "#24562B";
+                  //matte green
+                  else if (v >= low && v <= high) return "#FFE338";
+                  //matte yellow
+                  else if (v > high) return "#B2022F"; //matte red
+          }
+          else {
+            return "#A9A9B0";
+          }
+        };  
+        g.selectAll().data(data).enter().append('path').attr('d',pathGenerator).attr('class','my-block')
+        .style("fill", d =>myColor(1,c1Value(d))).on("mouseover", d => onMouseOver(d))          
+        .on("mouseout", function(d) {   
+                  tooltip.transition()    
+                  .duration(500)    
+                  .style("opacity", 0); 
+                });
      
   };
 
@@ -558,130 +410,92 @@ let geoJsonData = {{ context.select_area_geodata | safe }};
 let area_level = {{ area_level }};
 
 
-  
-  var data1 = []
-  data_state.forEach(element => {
-    data1.push(element.fields);
-  });
-
-  var data2 = []
-  data_district.forEach(element => {
-    data2.push(element.fields);
-  });
-
 if(area_level > 1)
 {
-  var data3 =[]
-  data_selectarea.forEach(element => {
-    data3.push(element.fields);
-  });
- 
-  //let select_area_geodata = JSON.parse(geoJsonData);
-  addPropertiesSelectedArea(data3, geoJsonData, svg3);
+  addPropertiesSelectedArea(data_selectarea, geoJsonData, svg3);
 }
 else{
-  addProperties(data1, stateJson, svg3);
+  addProperties(data_state, stateJson, svg3);
 }
 
-  const render = (data, svg) => {
-    const g = svg.append("g");
-    // var scaleCenter = calculateScaleCenter(geojson);
-    // console.log(scaleCenter.center, scaleCenter.scale, "in render" );
-    // mercator.scale(scaleCenter.scale)
-    //     .center(scaleCenter.center)
-    //     .translate([width/2, height/2]);
-    const mercator = d3
-      .geoMercator()
-      .scale(800)
-      .translate([width / 2, height / 2])
-      .center([73, 19.7]);
-    const pathGenerator = d3.geoPath().projection(mercator);
-    var tooltip = d3.select("body").append("div") 
-          .attr("class", "tooltip")       
-          .style("opacity", 0);
-  let c1Value  = d => d.dataValue;
-  const onMouseOver = d =>{	
-    if(typeof d.dataValue != 'undefined')
-    {
-  tooltip.transition().duration(200).style("opacity", .9);		
-  tooltip.html("<b>"+d.areaname+"</b><br><b>Value:</b>"+d.dataValue)
-      .style("left", d3.event.pageX + "px")
-      .style("top",  d3.event.pageY - 30 + "px");	
-    }
-  };
-  
-  let myColor = (opt,v) =>{
-    let min,max,comp, low, high; 
-      min = d3.min(data,c1Value);
-      max = d3.max(data,c1Value);
-      comp = (max - min)/3;
-      low = min+comp;
-      high =max -comp;
-    if (typeof v != "undefined") {
-           if (v < low) return "#24562B";
-            //matte green
-            else if (v >= low && v <= high) return "#FFE338";
-            //matte yellow
-            else if (v > high) return "#B2022F"; //matte red
-    }
-    else {
-      return "#A9A9B0";
-    }
-  };
-
-
-  	// let paths = g.selectAll('path').data(data);
-  
-    // let pathEnter = 
-    // paths.enter().append('path').attr('d',pathGenerator).attr('class','my-block')
-    // .style("fill", d =>myColor(1,c1Value(d))).on("mouseover", d => onMouseOver(d))          
-    // .on("mouseout", function(d) {   
-    //           tooltip.transition()    
-    //           .duration(500)    
-    //           .style("opacity", 0); 
-    //         });
-
-    g.selectAll().data(data).enter().append('path').attr('d',pathGenerator).attr('class','my-block')
-    .style("fill", d =>myColor(1,c1Value(d))).on("mouseover", d => onMouseOver(d))          
-    .on("mouseout", function(d) {   
-              tooltip.transition()    
-              .duration(500)    
-              .style("opacity", 0); 
-            });
-           
+  const render = (data, mercator, svg) => {
+        const g = svg.append("g");
+        const pathGenerator = d3.geoPath().projection(mercator);
+        var tooltip = d3.select("body").append("div") 
+              .attr("class", "tooltip")       
+              .style("opacity", 0);
+        let c1Value  = d => d.dataValue;
+        const onMouseOver = d =>
+        {	
+              if(typeof d.dataValue != 'undefined')
+              {
+            tooltip.transition().duration(200).style("opacity", .9);		
+            tooltip.html("<b>"+d.areaname+"</b><br><b>Value:</b>"+d.dataValue)
+                .style("left", d3.event.pageX + "px")
+                .style("top",  d3.event.pageY - 30 + "px");	
+              }
+        };
+      
+      let myColor = (opt,v) =>{
+        let min,max,comp, low, high; 
+          min = d3.min(data,c1Value);
+          console.log(min, "min" );
+          max = d3.max(data,c1Value);
+          comp = (max - min)/3;
+          low = min+comp;
+          high =max -comp;
+        if (typeof v != "undefined") {
+              if (v < low) return "#24562B";
+                //matte green
+                else if (v >= low && v <= high) return "#FFE338";
+                //matte yellow
+                else if (v > high) return "#B2022F"; //matte red
+        }
+        else {
+          return "#A9A9B0";
+        }
+      };
+        g.selectAll().data(data).enter().append('path').attr('d',pathGenerator).attr('class','my-block')
+        .style("fill", d =>myColor(1,c1Value(d))).on("mouseover", d => onMouseOver(d))          
+        .on("mouseout", function(d) {   
+                  tooltip.transition()    
+                  .duration(500)    
+                  .style("opacity", 0); 
+                });
+              
      
   };
 
-
-
-  addProperties(data1, stateJson, svg1);
-  addProperties(data2, districtJson, svg2); 
-
-
+  addProperties(data_state, stateJson, svg1);
+  addProperties(data_district, districtJson, svg2); 
 
   function addPropertiesSelectedArea(data, geojson, svg)
  {
- if( data != "")
+   
+ if( data.length > 0)
  {
-    for (var i = 0; i < data.length; i++) {
-		  var areaname = data[i].area_name;
+    
+      let newArr = _.map(data, function(item) {
+      return {
+        areacode: item.area.area_code,
+        areaname: item.area.area_name,
+        dataValue: parseFloat(item.data_value),
+      }
+    });
 
-        //var datac2 = data[i].c2;
-        
-      for (var j = 0; j < geojson.features.length; j++)  {
-     
-		  var jsonAreaName = geojson.features[j].properties.dt_name;
-        
-          if (areaname.trim() === jsonAreaName.trim()) { 
-            geojson.features[j].properties.dataValue = data[i].data_value;
-		  
-         // json.features[j].properties.c2 = +datac2; 
-          break;
-        }
-      }
-      }
-  renderSelectedarea(geojson.features, geojson, svg); 
-  }
+    let mergedGeoJson = _(newArr)
+      .keyBy('areaname')
+      .merge(_.keyBy(geojson.features, 'properties.dt_name'))
+      .values()
+      .value();
+
+    const mercator = d3
+        .geoMercator()
+        .fitSize([innerWidth, innerHeight], geojson);
+
+    renderSelectedarea(mergedGeoJson, mercator, svg); 
+ 
+ }
   else{
     svg.append('text').text('No data: please select another survey')
     .attr('x', "20%")
@@ -693,28 +507,30 @@ else{
 
  function addProperties(data, geojson, svg)
  {
-
- if( data != "")
- {
-  
-let newArr = _.map(data, era => ({
-  areacode: era['area_code'],
-  areaname: era['area_name'],
-  dataValue: era['data_value']
-  
-}));
-
-d3.json(geojson).then(json =>{
-let mergedGeoJson = _(newArr)
-   .keyBy('areacode')
-   .merge(_.keyBy(json.features, 'properties.ID_'))
-   .values()
-   .value();
-  console.log(mergedGeoJson);
-  render(mergedGeoJson, svg);
-
-}); 
-
+ if( data.length > 0)
+  {   
+    console.log(data, "dataon propertiesload");
+      let newArr = _.map(data, function(item) {
+        return {
+        areacode: item.area.area_code,
+        areaname: item.area.area_name,
+        dataValue: parseFloat(item.data_value),
+        }
+      });
+      console.log(newArr, "newArr");
+      d3.json(geojson).then(json =>{
+        let mergedGeoJson = _(newArr)
+          .keyBy('areacode')
+          .merge(_.keyBy(json.features, 'properties.ID_'))
+          .values()
+          .value();
+          console.log(mergedGeoJson);
+        const mercator = d3
+            .geoMercator()
+            .fitSize([innerWidth, innerHeight], json);
+        console.log(mercator);
+        render(mergedGeoJson, mercator, svg);
+    }); 
   }
   else{
     svg.append('text').text('No data: please select another survey')
@@ -723,27 +539,6 @@ let mergedGeoJson = _(newArr)
     .attr('fill', 'black')
   }
  }
-
- function calculateScaleCenter(features) {
-                    
-                    var bbox_path = pathGenerator.bounds(features),
-                    scale = 0.95 / Math.max(
-                        (bbox_path[1][0] - bbox_path[0][0]) / innerWidth,
-                        (bbox_path[1][1] - bbox_path[0][1]) / innerHeight
-                    );
-                    console.log(scale,'scale')
-                    var bbox_feature = d3.geoBounds(features),
-                    center = [
-                        (bbox_feature[1][0] + bbox_feature[0][0]) / 2,
-                        ((bbox_feature[1][1] + bbox_feature[0][1]) / 2)]; 
-                    
-                    console.log(center,"center")
-              
-                    return {
-                        'scale': scale,
-                        'center': center
-                    };
-                }
 
 $(function ()
 {
